@@ -1,5 +1,68 @@
 #!/bin/bash
 
+speed=15
+ts_ms=1000
+te_ms=1000
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+    key="$1"
+
+    case $key in
+        -s|--speed)
+            speed="$2"
+            shift # past argument
+            shift # past value
+            ;;
+        -ts|--time-start)
+            ts_ms="$2"
+            shift # past argument
+            shift # past value
+            ;;
+        -te|--time-end)
+            te_ms="$2"
+            shift # past argument
+            shift # past value
+            ;;
+        -l|--lib)
+            LIBPATH="$2"
+            shift # past argument
+            shift # past value
+            ;;
+        --default)
+            DEFAULT=YES
+            shift # past argument
+            ;;
+        *)    # unknown option
+            POSITIONAL+=("$1") # save it in an array for later
+            shift # past argument
+            ;;
+    esac
+done
+
+valid_integer () {
+    if ! [ "${1}" -eq "${1}" ] 2> /dev/null; then
+        echo "Invalid ${2}: ${1} ${3} - must be an integer"
+        exit 1
+    fi
+
+    if [ ${1} -lt ${4} ] ; then
+        echo "Invalid ${2}: ${1} ${3} - must be at least ${4} ${3}"
+        exit 1
+    fi
+
+    if [ ${1} -gt ${5} ] ; then
+        echo "Invalid ${2}: ${1} ${3} - must be less than ${5} ${3}"
+        exit 1
+    fi
+}
+
+valid_integer "${speed}" "speed" "wpm" 5 140
+valid_integer "${ts_ms}" "time-start" "ms" 0 5000
+valid_integer "${te_ms}" "time-end" "ms" 0 10000
+
+set -- "${POSITIONAL[@]}" # restore positional parameters
+
 # ^ - dot
 # | - dash
 mapping=$(cat <<EOF
@@ -61,32 +124,37 @@ EOF
 )
 
 inp=`echo "$1" | tr -s ' ' | sed 's/[^[:alnum:]\ .,\x27\?!/()&:;=+_"$@-]//g' | tr '[A-Z]' '[a-z]'`
-p="$inp"
 
-for pair in $mapping ; do
-    letter=$(echo $pair | cut -d \# -f 1)
-    code=$(echo $pair | cut -d \# -f 2)
-    out=`echo $inp | sed "s/$letter/$code#/g"`
+# plain english text
+plain="${inp}"
+
+# convert to morse code text
+for pair in ${mapping} ; do
+    letter=$(echo ${pair} | cut -d \# -f 1)
+    code=$(echo ${pair} | cut -d \# -f 2)
+    out=`echo ${inp} | sed "s/${letter}/${code}#/g"`
     inp="$out"
 done
 
-out=`echo $inp | sed 's/\^/./g' | sed 's/|/-/g' | sed 's| | / |g' | sed 's/\#/ /g'`
-t="$out"
+out=`echo ${inp} | sed 's/\^/./g' | sed 's/|/-/g' | sed 's| | / |g' | sed 's/\#/ /g'`
 
-wpm=15
+# morse code text, example: ... --- ... / -.-. --.-
+morse="${out}"
+
+dtms=`echo "scale=2;1200/${speed}" | bc`
+dts=`echo "scale=3;${dtms}/1000" | bc`
+fps=`echo "scale=2;1000/${dtms}" | bc`
+te=`echo "scale=0;${te_ms}/${dtms}" | bc`
+ts=`echo "scale=0;${ts_ms}/${dtms}" | bc`
+
+echo " - text:  ${plain}"
+echo " - morse: ${morse}"
+echo " - speed: ${speed} wpm"
+echo " - dot:   ${dtms} ms"
+echo " - fps:   ${fps}"
+
 dt=1
 j=0
-ts=20
-te=30
-
-dtms=`echo "scale=2;1200/${wpm}" | bc`
-echo $dtms
-dts=`echo "scale=3;${dtms}/1000" | bc`
-echo $dts
-fps=`echo "scale=2;1000/${dtms}" | bc`
-echo $fps
-
-echo $t
 
 rm img*
 
@@ -100,10 +168,9 @@ sub2="drawtext=fontfile=/path/to/font.ttf:text='':fontcolor=white:fontsize=48:bo
 cc=0
 
 jj0=$j
-for (( i=0; i<${#t}; i++ )); do
+for (( i=0; i<${#morse}; i++ )); do
     j0=$j
-    c="${t:$i:1}"
-    echo $c;
+    c="${morse:$i:1}"
     if [ "$c" = "." ] ; then
         jj=$(($j + $dt - 1))
         for k in $(seq -f "%05g" $j $jj); do cp ../cat1-final.png ./img$k.png; done
@@ -128,19 +195,19 @@ for (( i=0; i<${#t}; i++ )); do
 
     t0=`echo "scale=3;${j0}*${dts}" | bc`
     t1=`echo "scale=3;${j}*${dts}" | bc`
-    if [ "$ii" = "${#t}" ] ; then
+    if [ "$ii" = "${#morse}" ] ; then
         t1=9999
     fi
-    sub="${sub}, drawtext=fontfile=/path/to/font.ttf:text='${t:0:$ii}':fontcolor=white:fontsize=48:box=1:boxcolor=black@1.0:boxborderw=5:x=(w)/6:y=4*(h-text_h)/5:enable='between(t,${t0},${t1})'"
+    sub="${sub}, drawtext=fontfile=/path/to/font.ttf:text='${morse:0:$ii}':fontcolor=white:fontsize=48:box=1:boxcolor=black@1.0:boxborderw=5:x=(w)/6:y=4*(h-text_h)/5:enable='between(t,${t0},${t1})'"
 
     if [ "$c" = " " ] ; then
         t0=`echo "scale=3;${jj0}*${dts}" | bc`
         t1=`echo "scale=3;${j}*${dts}" | bc`
         cc=$(($cc + 1))
-        if [ "$cc" = "${#p}" ] ; then
+        if [ "$cc" = "${#plain}" ] ; then
             t1=9999
         fi
-        sub2="${sub2}, drawtext=fontfile=/path/to/font.ttf:text='${p:0:$cc}':fontcolor=white:fontsize=48:box=1:boxcolor=black@1.0:boxborderw=5:x=(w)/6:y=4*(h+text_h)/5:enable='between(t,${t0},${t1})'"
+        sub2="${sub2}, drawtext=fontfile=/path/to/font.ttf:text='${plain:0:$cc}':fontcolor=white:fontsize=48:box=1:boxcolor=black@1.0:boxborderw=5:x=(w)/6:y=4*(h+text_h)/5:enable='between(t,${t0},${t1})'"
         jj0=$j
     elif [ "$c" = "/" ] ; then
         cc=$(($cc - 1))
@@ -151,27 +218,24 @@ jj=$(($j + $te*$dt - 1))
 for k in $(seq -f "%05g" $j $jj); do cp ../cat0-final.png ./img$k.png; done
 j=$(($jj + 1))
 
-echo $sub
-echo $sub2
-ffmpeg -y -r 1000/${dtms} -i img%05d.png -c:v libx264 -pix_fmt yuv420p -vf "${sub},${sub2}" -r 25 out.mp4
+ffmpeg -hide_banner -loglevel error -y -r 1000/${dtms} -i img%05d.png -c:v libx264 -pix_fmt yuv420p -vf "${sub},${sub2}" -r ${fps} out.mp4
 
 os=`echo "scale=3;$dts*($ts-1)" | bc`
 os=`LANG=C LC_NUMERIC=C printf "%06.3f" $os`
-echo "XXX $os"
 
-curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${p}&f=500&w=${wpm}&s=20000" --output out0.wav
-curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${p}&f=700&w=${wpm}&s=20000" --output out1.wav
-curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${p}&f=1500&w=${wpm}&s=20000" --output out2.wav
-curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${p}&f=2100&w=${wpm}&s=20000" --output out3.wav
+curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=500&w=${speed}&s=20000" --output out0.wav
+curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=700&w=${speed}&s=20000" --output out1.wav
+curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=1500&w=${speed}&s=20000" --output out2.wav
+curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=2100&w=${speed}&s=20000" --output out3.wav
 
-#curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${p}&f=300&w=${wpm}" --output out0.wav
-#curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${p}&f=400&w=${wpm}" --output out1.wav
-#curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${p}&f=500&w=${wpm}" --output out2.wav
-#curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${p}&f=750&w=${wpm}" --output out3.wav
+#curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=300&w=${speed}" --output out0.wav
+#curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=400&w=${speed}" --output out1.wav
+#curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=500&w=${speed}" --output out2.wav
+#curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=750&w=${speed}" --output out3.wav
 
-ffmpeg -y -i out0.wav -i out1.wav -i out2.wav -i out3.wav -filter_complex amix=inputs=4:duration=first:dropout_transition=0 out.wav
+ffmpeg -hide_banner -loglevel error -y -i out0.wav -i out1.wav -i out2.wav -i out3.wav -filter_complex amix=inputs=4:duration=first:dropout_transition=0 out.wav
 
-ffmpeg -y -i out.mp4 -itsoffset 00:00:${os} -i out.wav -map 0:0 -map 1:0 -c:v copy -c:a aac -async 1 final.mp4
+ffmpeg -hide_banner -loglevel error -y -i out.mp4 -itsoffset 00:00:${os} -i out.wav -map 0:0 -map 1:0 -c:v copy -c:a aac -async 1 final.mp4
 
 #ffmpeg -r $r -i img%05d.png -c:v libx264 -vf fps=25 -pix_fmt yuv420p -vf "\
 #drawtext=fontfile=/path/to/font.ttf:text='a':fontcolor=white:fontsize=32:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=4*(h-text_h)/5:enable='between(t,1,2.5)', \
