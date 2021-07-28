@@ -211,16 +211,17 @@ for (( i=0; i<${#morse}; i++ )); do
     if [ "$ii" = "${#morse}" ] ; then
         t1=9999
     fi
-    sub="${sub}, drawtext=fontfile=${font}:text='${morse:0:$ii}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@0.5:boxborderw=5:x=(w)/6:y=4*(h-text_h)/5:enable='between(t,${t0},${t1})'"
+    sub="${sub}, drawtext=fontfile=${font}:text='${morse:0:$ii}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@1.0:boxborderw=5:x=(w)/6:y=4*(h-text_h)/5:enable='between(t,${t0},${t1})'"
 
     if [ "$c" = " " ] ; then
         t0=`echo "scale=3;${jj0}*${dts}" | bc`
         t1=`echo "scale=3;${j}*${dts}" | bc`
         cc=$(($cc + 1))
         if [ "$cc" = "${#plain}" ] ; then
+            sub3="hue=H=20*PI*t:s=cos(2*PI*t)+5+t:enable='between(t,0.75,${t1})'"
             t1=9999
         fi
-        sub2="${sub2}, drawtext=fontfile=${font}:text='${plain:0:$cc}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@0.5:boxborderw=5:x=(w)/6:y=5*(h)/6:enable='between(t,${t0},${t1})'"
+        sub2="${sub2}, drawtext=fontfile=${font}:text='${plain:0:$cc}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@1.0:boxborderw=5:x=(w)/6:y=5*(h)/6:enable='between(t,${t0},${t1})'"
         jj0=$j
     elif [ "$c" = "/" ] ; then
         cc=$(($cc - 1))
@@ -231,6 +232,7 @@ jj=$(($j + $te*$dt - 1))
 for k in $(seq -f "%05g" $j $jj); do cp ../cat0-final.png ./img$k.png; done
 j=$(($jj + 1))
 
+#ffmpeg -hide_banner -loglevel error -y -r 1000/${dtms} -i img%05d.png -c:v libx264 -pix_fmt yuv420p -vf "${sub},${sub2}",${sub3} -r ${fps} out.mp4
 ffmpeg -hide_banner -loglevel error -y -r 1000/${dtms} -i img%05d.png -c:v libx264 -pix_fmt yuv420p -vf "${sub},${sub2}" -r ${fps} out.mp4
 
 os=`echo "scale=3;$dts*($ts-1)" | bc`
