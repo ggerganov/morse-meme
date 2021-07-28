@@ -1,60 +1,74 @@
 #!/bin/bash
 
-##
-## Very Simple Morse Code Translator
-##
-
-
-input=$HOME/.smorse.input.$$
-output=$HOME/.smorse.output.$$
-
+# ^ - dot
+# | - dash
 mapping=$(cat <<EOF
-a:.-
-b:-...
-c:-.-.
-d:-..
-e:.
-f:..-..
-g:--.
-h:....
-i:..
-j:.---
-k:-.-
-l:.-..
-m:--
-n:-.
-o:---
-p:.--.
-q:--.-
-r:.-.
-s:...
-t:-
-u:..-
-v:...-
-w:.--
-x:-..-
-y:-.--
-z:--..
+a#^|
+b#|^^^
+c#|^|^
+d#|^^
+e#^
+f#^^|^^
+g#||^
+h#^^^^
+i#^^
+j#^|||
+k#|^|
+l#^|^^
+m#||
+n#|^
+o#|||
+p#^||^
+q#||^|
+r#^|^
+s#^^^
+t#|
+u#^^|
+v#^^^|
+w#^||
+x#|^^|
+y#|^||
+z#||^^
+1#^||||
+2#^^|||
+3#^^^||
+4#^^^^|
+5#^^^^^
+6#|^^^^
+7#||^^^
+8#|||^^
+9#||||^
+0#|||||
+\\.#^|^|^|
+,#||^^||
+?#^^||^^
+'#^||||^
+!#|^|^||
+\\/#|^^|^
+(#|^||^
+)#|^||^|
+&#^|^^^
+\\:#|||^^^
+;#|^|^|^
+=#|^^^|
+\\+#^|^|^
+-#|^^^^|
+_#^^||^|
+"#^|^^|^
+\\\$#^^^|^^|
+@#^||^|^
 EOF
 )
 
-if [ -z "$*" ] ; then
-  cat > $input
-else
-  echo "$@" > $input
-fi
+inp=`echo "$@" | tr -s ' ' | sed 's/[^[:alnum:]\ .,\x27\?!/()&:;=+_"$@-]//g' | tr '[A-Z]' '[a-z]'`
+echo $inp
 
-tr '[A-Z]' '[a-z]' < $input > $output
-mv $output $input
+for pair in $mapping ; do
+    letter=$(echo $pair | cut -d \# -f 1)
+    code=$(echo $pair | cut -d \# -f 2)
+    out=`echo $inp | sed "s/$letter/$code#/g"`
+    inp="$out"
+done
 
-sed 's| | / |g' < $input > $output
-mv $output $input
-
-for pair in  $mapping ; do
-  letter=$(echo $pair | cut -d : -f 1)
-  code=$(echo $pair | cut -d : -f 2)
-  sed "s/$letter/$code /g" < $input > $output
-  mv $output $input
- done
-
-cat $input
+out=`echo $inp | sed 's/\^/./g' | sed 's/|/-/g' | sed 's| | / |g' | sed 's/\#/ /g'`
+echo $out
