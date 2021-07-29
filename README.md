@@ -1,5 +1,7 @@
 # morse-meme
 
+Procedural generation of Morse Code memes in Bash
+
 ## dependencies
 
 ```bash
