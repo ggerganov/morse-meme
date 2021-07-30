@@ -5,7 +5,24 @@ ts_ms=1000
 te_ms=1000
 font="DejaVuSans.ttf"
 fontsize=48
-fontcolor="white"
+fontcolor="0xffffff"
+
+print_usage () {
+    echo "Usage: ${0} [options] \"meme text\""
+    echo ""
+    echo "Options:"
+    echo "-s        Tx speed in WPM"
+    echo "-ts       start pause in ms"
+    echo "-te       end pause in ms"
+    echo "-fs       font size in px"
+    echo "-fc       font color (e.g 0xffffff)"
+    echo ""
+    echo "Examples:"
+    echo "      ${0} \"test\""
+    echo "      ${0} -s 50 \"2 fast\""
+    echo "      ${0} -ts 3000 -s 50 \"pause\""
+    echo "      ${0} -fs 100 \"big\""
+}
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
@@ -37,8 +54,8 @@ while [[ $# -gt 0 ]]; do
             shift # past argument
             shift # past value
             ;;
-        --default)
-            DEFAULT=YES
+        -h|--help)
+            print_help=YES
             shift # past argument
             ;;
         *)    # unknown option
@@ -47,6 +64,18 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+if [ ${print_help} ] ; then
+    print_usage
+    exit 0
+fi
+
+valid_color () {
+    if ! echo $1 | grep -P -q "^0x[0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F]$" ; then
+        echo "Invalid color: ${1}"
+        exit 1
+    fi
+}
 
 valid_integer () {
     if ! [ "${1}" -eq "${1}" ] 2> /dev/null; then
@@ -69,6 +98,8 @@ valid_integer "${speed}" "speed" "wpm" 5 140
 valid_integer "${ts_ms}" "time-start" "ms" 0 5000
 valid_integer "${te_ms}" "time-end" "ms" 0 10000
 valid_integer "${fontsize}" "fontsize" "px" 8 256
+
+valid_color "${fontcolor}"
 
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
@@ -136,6 +167,11 @@ inp=`echo "$1" | tr -s ' ' | sed 's/[^[:alnum:]\ .,\x27\?!/()&:;=+_"$@-]//g'`
 
 # plain english text
 plain="${inp}"
+
+if [ "${plain}" = "" ] ; then
+    print_usage
+    exit 1
+fi
 
 # to lowercase
 inp=`echo "$plain" | tr '[A-Z]' '[a-z]'`
