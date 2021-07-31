@@ -1,13 +1,13 @@
 #!/bin/bash
 
-speed=15
+speed=35
 ts_ms=1000
-te_ms=1000
+te_ms=2000
 font="DejaVuSans.ttf"
 fontsize=16
 fontcolor="0xffffff"
-hidecode=
-hideplain=
+nocode=
+noplain=
 img=cat512
 
 print_usage () {
@@ -19,8 +19,8 @@ print_usage () {
     echo "-te n         end pause in ms"
     echo "-fs n         font size in px"
     echo "-fc color     font color (e.g 0xffffff)"
-    echo "-hc           hide morse code text"
-    echo "-hp           hide plain text"
+    echo "-nc           hide morse code text"
+    echo "-np           hide plain text"
     echo ""
     echo "Examples:"
     echo "      ${0} \"test\""
@@ -59,12 +59,12 @@ while [[ $# -gt 0 ]]; do
             shift
             shift
             ;;
-        -hc|--hide-code)
-            hidecode=YES
+        -nc|--no-code)
+            nocode=YES
             shift
             ;;
-        -hp|--hide-plain)
-            hideplain=YES
+        -np|--no-plain)
+            noplain=YES
             shift
             ;;
         -h|--help)
@@ -84,7 +84,7 @@ if [ ${print_help} ] ; then
 fi
 
 valid_color () {
-    if ! echo $1 | grep -P -q "^0x[0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F]$" ; then
+    if ! echo $1 | grep -G -q "^0x[0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F]$" ; then
         echo "Invalid color: ${1}"
         exit 1
     fi
@@ -118,7 +118,7 @@ set -- "${POSITIONAL[@]}" # restore positional parameters
 
 # ^ - dot
 # | - dash
-mapping=$(cat <<EOF
+read -r -d '' mapping << EOM
 a#^|
 b#|^^^
 c#|^|^
@@ -173,10 +173,9 @@ _#^^||^|
 "#^|^^|^
 \\\$#^^^|^^|
 @#^||^|^
-EOF
-)
+EOM
 
-inp=`echo "$1" | tr -s ' ' | sed 's/[^[:alnum:]\ .,\x27\?!/()&:;=+_"$@-]//g'`
+inp=$(echo "$1" | tr -s ' ' | sed 's/[^[:alnum:]\ .,\x27\?!/()&:;=+_"$@-]//g')
 
 # plain english text
 plain="${inp}"
@@ -187,26 +186,26 @@ if [ "${plain}" = "" ] ; then
 fi
 
 # to lowercase
-inp=`echo "$plain" | tr '[A-Z]' '[a-z]'`
+inp=$(echo "$plain" | tr '[A-Z]' '[a-z]')
 
 # convert to morse code text
 for pair in ${mapping} ; do
     letter=$(echo ${pair} | cut -d \# -f 1)
     code=$(echo ${pair} | cut -d \# -f 2)
-    out=`echo ${inp} | sed "s/${letter}/${code}#/g"`
+    out=$(echo ${inp} | sed "s/${letter}/${code}#/g")
     inp="$out"
 done
 
-out=`echo ${inp} | sed 's/\^/./g' | sed 's/|/-/g' | sed 's| | / |g' | sed 's/\#/ /g'`
+out=$(echo ${inp} | sed 's/\^/./g' | sed 's/|/-/g' | sed 's| | / |g' | sed 's/\#/ /g')
 
 # morse code text, example: ... --- ... / -.-. --.-
 morse="${out}"
 
-dtms=`echo "scale=2;1200/${speed}" | bc`
- dts=`echo "scale=3;${dtms}/1000" | bc`
- fps=`echo "scale=0;1000/${dtms} + 1" | bc`
-  te=`echo "scale=0;${te_ms}/${dtms}" | bc`
-  ts=`echo "scale=0;${ts_ms}/${dtms}" | bc`
+dtms=$(echo "scale=2;1200/${speed}" | bc)
+ dts=$(echo "scale=3;${dtms}/1000" | bc)
+ fps=$(echo "scale=0;1000/${dtms} + 1" | bc)
+  te=$(echo "scale=0;${te_ms}/${dtms}" | bc)
+  ts=$(echo "scale=0;${ts_ms}/${dtms}" | bc)
 
 echo " - text:      ${plain}"
 echo " - morse:     ${morse}"
@@ -216,8 +215,8 @@ echo " - fps:       ${fps}"
 echo " - font:      ${font}"
 echo " - fontsize:  ${fontsize} px"
 echo " - fontcolor: ${fontcolor}"
-echo " - hidecode:  ${hidecode}"
-echo " - hideplain: ${hideplain}"
+echo " - nocode:    ${nocode}"
+echo " - noplain:   ${noplain}"
 
 dt=1
 cc=0
@@ -257,24 +256,24 @@ for (( i=0; i<${#morse}; i++ )); do
     ii=$(($i + 1))
     j=$(($jj + 1))
 
-    t0=`echo "scale=3;${j0}*${dts}" | bc`
-    t1=`echo "scale=3;${j}*${dts}" | bc`
+    t0=$(echo "scale=3;${j0}*${dts}" | bc)
+    t1=$(echo "scale=3;${j}*${dts}" | bc)
     if [ "$ii" = "${#morse}" ] ; then
         t1=9999
     fi
-    if ! [ "${hidecode}" ] ; then
+    if ! [ "${nocode}" ] ; then
         sub="${sub}, drawtext=fontfile=${font}:text='${morse:0:$ii}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@1.0:boxborderw=5:x=(w)/6:y=4*(h-text_h)/5:enable='between(t,${t0},${t1})'"
     fi
 
     if [ "$c" = " " ] ; then
-        t0=`echo "scale=3;${jj0}*${dts}" | bc`
-        t1=`echo "scale=3;${j}*${dts}" | bc`
+        t0=$(echo "scale=3;${jj0}*${dts}" | bc)
+        t1=$(echo "scale=3;${j}*${dts}" | bc)
         cc=$(($cc + 1))
         if [ "$cc" = "${#plain}" ] ; then
             sub3="hue=H=20*PI*t:s=cos(2*PI*t)+5+t:enable='between(t,0.75,${t1})'"
             t1=9999
         fi
-        if ! [ "${hideplain}" ] ; then
+        if ! [ "${noplain}" ] ; then
             sub2="${sub2}, drawtext=fontfile=${font}:text='${plain:0:$cc}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@1.0:boxborderw=5:x=(w)/6:y=5*(h)/6:enable='between(t,${t0},${t1})'"
         fi
         jj0=$j
@@ -290,8 +289,8 @@ j=$(($jj + 1))
 #ffmpeg -hide_banner -loglevel error -y -r 1000/${dtms} -i img%05d.png -c:v libx264 -pix_fmt yuv420p -vf "${sub},${sub2}",${sub3} -r ${fps} out.mp4
 ffmpeg -hide_banner -loglevel error -y -r 1000/${dtms} -i img%05d.png -c:v libx264 -pix_fmt yuv420p -vf "${sub},${sub2}" -r ${fps} out.mp4
 
-os=`echo "scale=3;$dts*($ts-1)" | bc`
-os=`LANG=C LC_NUMERIC=C printf "%06.3f" $os`
+os=$(echo "scale=3;$dts*($ts-1)" | bc)
+os=$(LANG=C LC_NUMERIC=C printf "%06.3f" $os)
 
 curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=500&w=${speed}&s=20000" --output out0.wav
 curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=700&w=${speed}&s=20000" --output out1.wav
