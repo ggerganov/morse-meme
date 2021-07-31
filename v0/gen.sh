@@ -4,24 +4,29 @@ speed=15
 ts_ms=1000
 te_ms=1000
 font="DejaVuSans.ttf"
-fontsize=48
+fontsize=16
 fontcolor="0xffffff"
+hidecode=
+hideplain=
+img=cat512
 
 print_usage () {
     echo "Usage: ${0} [options] \"meme text\""
     echo ""
     echo "Options:"
-    echo "-s        Tx speed in WPM"
-    echo "-ts       start pause in ms"
-    echo "-te       end pause in ms"
-    echo "-fs       font size in px"
-    echo "-fc       font color (e.g 0xffffff)"
+    echo "-s n          Tx speed in WPM"
+    echo "-ts n         start pause in ms"
+    echo "-te n         end pause in ms"
+    echo "-fs n         font size in px"
+    echo "-fc color     font color (e.g 0xffffff)"
+    echo "-hc           hide morse code text"
+    echo "-hp           hide plain text"
     echo ""
     echo "Examples:"
     echo "      ${0} \"test\""
     echo "      ${0} -s 50 \"2 fast\""
     echo "      ${0} -ts 3000 -s 50 \"pause\""
-    echo "      ${0} -fs 100 \"big\""
+    echo "      ${0} -fs 48 \"big\""
 }
 
 POSITIONAL=()
@@ -31,36 +36,44 @@ while [[ $# -gt 0 ]]; do
     case $key in
         -s|--speed)
             speed="$2"
-            shift # past argument
-            shift # past value
+            shift
+            shift
             ;;
         -ts|--time-start)
             ts_ms="$2"
-            shift # past argument
-            shift # past value
+            shift
+            shift
             ;;
         -te|--time-end)
             te_ms="$2"
-            shift # past argument
-            shift # past value
+            shift
+            shift
             ;;
         -fs|--font-size)
             fontsize="$2"
-            shift # past argument
-            shift # past value
+            shift
+            shift
             ;;
         -fc|--font-color)
             fontcolor="$2"
-            shift # past argument
-            shift # past value
+            shift
+            shift
+            ;;
+        -hc|--hide-code)
+            hidecode=YES
+            shift
+            ;;
+        -hp|--hide-plain)
+            hideplain=YES
+            shift
             ;;
         -h|--help)
             print_help=YES
-            shift # past argument
+            shift
             ;;
-        *)    # unknown option
+        *)
             POSITIONAL+=("$1") # save it in an array for later
-            shift # past argument
+            shift
             ;;
     esac
 done
@@ -203,6 +216,8 @@ echo " - fps:       ${fps}"
 echo " - font:      ${font}"
 echo " - fontsize:  ${fontsize} px"
 echo " - fontcolor: ${fontcolor}"
+echo " - hidecode:  ${hidecode}"
+echo " - hideplain: ${hideplain}"
 
 dt=1
 cc=0
@@ -214,7 +229,7 @@ sub="drawtext=fontfile=${font}:text=''"
 sub2="drawtext=fontfile=${font}:text=''"
 
 jj=$(($j + $ts*$dt - 1))
-for k in $(seq -f "%05g" $j $jj); do cp ../cat0-final.png ./img$k.png; done
+for k in $(seq -f "%05g" $j $jj); do cp ../${img}-0.png ./img$k.png; done
 j=$(($jj + 1))
 jj0=$j
 for (( i=0; i<${#morse}; i++ )); do
@@ -222,22 +237,22 @@ for (( i=0; i<${#morse}; i++ )); do
     c="${morse:$i:1}"
     if [ "$c" = "." ] ; then
         jj=$(($j + $dt - 1))
-        for k in $(seq -f "%05g" $j $jj); do cp ../cat1-final.png ./img$k.png; done
+        for k in $(seq -f "%05g" $j $jj); do cp ../${img}-1.png ./img$k.png; done
         j=$(($jj + 1))
         jj=$(($j + $dt - 1))
-        for k in $(seq -f "%05g" $j $jj); do cp ../cat0-final.png ./img$k.png; done
+        for k in $(seq -f "%05g" $j $jj); do cp ../${img}-0.png ./img$k.png; done
     elif [ "$c" = "-" ] ; then
         jj=$(($j + 3*$dt - 1))
-        for k in $(seq -f "%05g" $j $jj); do cp ../cat1-final.png ./img$k.png; done
+        for k in $(seq -f "%05g" $j $jj); do cp ../${img}-1.png ./img$k.png; done
         j=$(($jj + 1))
         jj=$(($j + $dt - 1))
-        for k in $(seq -f "%05g" $j $jj); do cp ../cat0-final.png ./img$k.png; done
+        for k in $(seq -f "%05g" $j $jj); do cp ../${img}-0.png ./img$k.png; done
     elif [ "$c" = "/" ] ; then
         jj=$(($j + 0*$dt - 1))
-        for k in $(seq -f "%05g" $j $jj); do cp ../cat0-final.png ./img$k.png; done
+        for k in $(seq -f "%05g" $j $jj); do cp ../${img}-0.png ./img$k.png; done
     else
         jj=$(($j + 2*$dt - 1))
-        for k in $(seq -f "%05g" $j $jj); do cp ../cat0-final.png ./img$k.png; done
+        for k in $(seq -f "%05g" $j $jj); do cp ../${img}-0.png ./img$k.png; done
     fi
     ii=$(($i + 1))
     j=$(($jj + 1))
@@ -247,7 +262,9 @@ for (( i=0; i<${#morse}; i++ )); do
     if [ "$ii" = "${#morse}" ] ; then
         t1=9999
     fi
-    sub="${sub}, drawtext=fontfile=${font}:text='${morse:0:$ii}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@1.0:boxborderw=5:x=(w)/6:y=4*(h-text_h)/5:enable='between(t,${t0},${t1})'"
+    if ! [ "${hidecode}" ] ; then
+        sub="${sub}, drawtext=fontfile=${font}:text='${morse:0:$ii}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@1.0:boxborderw=5:x=(w)/6:y=4*(h-text_h)/5:enable='between(t,${t0},${t1})'"
+    fi
 
     if [ "$c" = " " ] ; then
         t0=`echo "scale=3;${jj0}*${dts}" | bc`
@@ -257,7 +274,9 @@ for (( i=0; i<${#morse}; i++ )); do
             sub3="hue=H=20*PI*t:s=cos(2*PI*t)+5+t:enable='between(t,0.75,${t1})'"
             t1=9999
         fi
-        sub2="${sub2}, drawtext=fontfile=${font}:text='${plain:0:$cc}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@1.0:boxborderw=5:x=(w)/6:y=5*(h)/6:enable='between(t,${t0},${t1})'"
+        if ! [ "${hideplain}" ] ; then
+            sub2="${sub2}, drawtext=fontfile=${font}:text='${plain:0:$cc}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@1.0:boxborderw=5:x=(w)/6:y=5*(h)/6:enable='between(t,${t0},${t1})'"
+        fi
         jj0=$j
     elif [ "$c" = "/" ] ; then
         cc=$(($cc - 1))
@@ -265,7 +284,7 @@ for (( i=0; i<${#morse}; i++ )); do
 done
 
 jj=$(($j + $te*$dt - 1))
-for k in $(seq -f "%05g" $j $jj); do cp ../cat0-final.png ./img$k.png; done
+for k in $(seq -f "%05g" $j $jj); do cp ../${img}-0.png ./img$k.png; done
 j=$(($jj + 1))
 
 #ffmpeg -hide_banner -loglevel error -y -r 1000/${dtms} -i img%05d.png -c:v libx264 -pix_fmt yuv420p -vf "${sub},${sub2}",${sub3} -r ${fps} out.mp4
