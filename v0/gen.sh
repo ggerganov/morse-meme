@@ -10,7 +10,7 @@ nocode=
 noplain=
 img=cat512
 noise=
-noisevolume=25
+noisevolume=75
 flash=
 sound="random"
 
@@ -351,6 +351,8 @@ ls=$(echo "scale=3;${dts}*(${j}-1)" | bc)
 ls=$(LANG=C LC_NUMERIC=C printf "%.3f" ${ls})
 os=$(echo "scale=3;${dts}*(${ts}-1)" | bc)
 os=$(LANG=C LC_NUMERIC=C printf "%.3f" ${os})
+osn=$(echo "scale=3;0.5*${dts}*(${ts}-1)" | bc)
+osn=$(LANG=C LC_NUMERIC=C printf "%.3f" ${osn})
 osms=$(echo "scale=3;${dtms}*(${ts}-1)" | bc)
 osms=$(LANG=C LC_NUMERIC=C printf "%.3f" ${osms})
 
@@ -395,17 +397,17 @@ eval sox --norm -m ${mix} out.wav
 #ffmpeg -hide_banner -loglevel error -y -i out0.wav -i out1.wav -i out2.wav -i out3.wav -filter_complex amix=inputs=4:duration=first:dropout_transition=0 out.wav
 
 if [ "${noise}" == "low" ] ; then
-    sox -n noise.wav synth ${ls} brownnoise band -n 155 95 tremolo 1.3 10.0 fade q ${os} ${ls} 1
+    sox -n noise.wav synth ${ls} brownnoise band -n 155 95 tremolo 1.3 10.0 fade q ${osn} ${ls} 1
 elif [ "${noise}" == "mid" ] ; then
-    sox -n noise.wav synth ${ls} brownnoise band -n 500 125 tremolo 1.3 10.0 fade q ${os} ${ls} 1
+    sox -n noise.wav synth ${ls} brownnoise band -n 500 125 tremolo 1.3 10.0 fade q ${osn} ${ls} 1
 elif [ "${noise}" == "high" ] ; then
-    sox -n noise.wav synth ${ls} brownnoise band -n 2000 500 tremolo 1.3 10.0 fade q ${os} ${ls} 1
+    sox -n noise.wav synth ${ls} brownnoise band -n 2000 500 tremolo 1.3 10.0 fade q ${osn} ${ls} 1
 elif [ "${noise}" == "helicopter" ] ; then
-    sox -m "|sox -n -p synth ${ls} brownnoise band -n 500 50 tremolo 1.3 10.0 fade q ${os} ${ls} 1" "|sox -n -p synth ${ls} pinknoise band -n 500 250 tremolo 10.0 90.0 fade q ${os} ${ls} 1 gain 2" noise.wav
+    sox -m "|sox -n -p synth ${ls} brownnoise band -n 500 50 tremolo 1.3 10.0 fade q ${osn} ${ls} 1" "|sox -n -p synth ${ls} pinknoise band -n 500 250 tremolo 10.0 90.0 fade q ${osn} ${ls} 1 gain 2" noise.wav
 elif [ "${noise}" == "truck" ] ; then
-    sox -m "|sox -n -p synth ${ls} brownnoise band -n 500 125 tremolo 1.3 20.0 fade q ${os} ${ls} 1" "|sox -n -p synth ${ls} brownnoise band -n 155 95 tremolo 4.3 50.0 fade q ${os} ${ls} 1 gain 2" noise.wav
+    sox -m "|sox -n -p synth ${ls} brownnoise band -n 500 125 tremolo 1.3 20.0 fade q ${osn} ${ls} 1" "|sox -n -p synth ${ls} brownnoise band -n 155 95 tremolo 4.3 50.0 fade q ${osn} ${ls} 1 gain 2" noise.wav
 elif [ "${noise}" == "submarine" ] ; then
-    sox -m "|sox -n -p synth ${ls} brownnoise band -n 500 125 tremolo 4.3 50.0 fade q ${os} ${ls} 1 gain 2" "|sox -n -p synth ${ls} brownnoise band -n 155 95 tremolo 1.3 20.0 fade q ${os} ${ls} 1 gain 1" noise.wav
+    sox -m "|sox -n -p synth ${ls} brownnoise band -n 500 125 tremolo 4.3 50.0 fade q ${osn} ${ls} 1 gain 2" "|sox -n -p synth ${ls} brownnoise band -n 155 95 tremolo 1.3 20.0 fade q ${osn} ${ls} 1 gain 1" noise.wav
 else
     sox -n noise.wav synth ${ls}
     noisevolume=0
