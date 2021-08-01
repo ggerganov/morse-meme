@@ -218,7 +218,8 @@ _#^^||^|
 @#^||^|^
 EOM
 
-inp=$(echo "$1" | tr -s ' ' | sed 's/[^[:alnum:]\ .,\x27\?!/()&:;=+_"$@-]//g')
+#inp=$(echo "$1" | tr -s ' ' | sed 's/[^[:alnum:]\ .,\x27\?!/()&:;=+_"$@-]//g')
+inp=$(echo "$1" | tr -s ' ' | sed 's/[^[:alnum:]\ .,\x27\?!/():;=+_"$@-]//g')
 
 # plain english text
 plain="${inp}"
