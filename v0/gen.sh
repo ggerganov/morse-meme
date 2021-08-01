@@ -10,7 +10,13 @@ nocode=
 noplain=
 img=cat512
 noise=
-noisevolume=50
+noisevolume=25
+flash=
+sound="random"
+
+rand () {
+    echo $((1 + $RANDOM % ${1}))
+}
 
 print_usage () {
     echo "Usage: ${0} [options] \"meme text\""
@@ -23,8 +29,10 @@ print_usage () {
     echo "-fc color     font color (e.g 0xffffff)"
     echo "-nc           hide morse code text"
     echo "-np           hide plain text"
-    echo "-n noise      add background noise"
-    echo "-nv n         noise volume [0-100]"
+    echo "-n type       add background noise"
+    echo "-nv n         noise volume [percent 0-100]"
+    echo "-f            color flashes"
+    echo "-st type      sound type"
     echo ""
     echo "Examples:"
     echo "      ${0} \"test\""
@@ -81,6 +89,15 @@ while [[ $# -gt 0 ]]; do
             shift
             shift
             ;;
+        -st|--sound-type)
+            sound="$2"
+            shift
+            shift
+            ;;
+        -f|--flash)
+            flash=YES
+            shift
+            ;;
         -h|--help)
             print_help=YES
             shift
@@ -121,10 +138,9 @@ valid_color () {
     fi
 }
 
-valid_noise () {
-    list="low mid high helicopter truck submarine"
-    if [ "${1}" ] && ! [[ ${list} =~ (^|[[:space:]])${1}($|[[:space:]]) ]] ; then
-        echo "Invalid noise: ${1}"
+valid_option () {
+    if [ "${1}" ] && ! [[ ${3} =~ (^|[[:space:]])${1}($|[[:space:]]) ]] ; then
+        echo "Invalid ${2}: ${1}"
         exit 1
     fi
 }
@@ -136,8 +152,10 @@ valid_integer "${fontsize}" "fontsize" "px" 8 256
 
 valid_color "${fontcolor}"
 
-valid_noise "${noise}"
+valid_option "${noise}" "noise" "low mid high helicopter truck submarine"
 valid_integer "${noisevolume}" "noise volume" "" 0 100
+
+valid_option "${sound}" "sound" "random"
 
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
@@ -246,6 +264,7 @@ echo " - timestart:     ${ts_ms} ms"
 echo " - timeend:       ${te_ms} ms"
 echo " - noise:         ${noise}"
 echo " - noisevolume:   ${noisevolume}"
+echo " - flash:         ${flash}"
 
 dt=1
 cc=0
@@ -255,6 +274,7 @@ rm img*
 
 sub="drawtext=fontfile=${font}:text=''"
 sub2="drawtext=fontfile=${font}:text=''"
+sub3="drawtext=fontfile=${font}:text=''"
 
 jj=$(($j + $ts*$dt - 1))
 for k in $(seq -f "%05g" $j $jj); do cp ../${img}-0.png ./img$k.png; done
@@ -262,17 +282,27 @@ j=$(($jj + 1))
 jj0=$j
 for (( i=0; i<${#morse}; i++ )); do
     j0=$j
+    t0=$(echo "scale=3;${j0}*${dts}" | bc)
+
     c="${morse:$i:1}"
     if [ "$c" = "." ] ; then
         jj=$(($j + $dt - 1))
         for k in $(seq -f "%05g" $j $jj); do cp ../${img}-1.png ./img$k.png; done
         j=$(($jj + 1))
+
+        t1=$(echo "scale=3;${j}*${dts}" | bc)
+        [ "${flash}" ] && sub3="${sub3}, hue=H=20*PI*t:s=cos(2*PI*t)+5+t:enable='between(t,${t0},${t1})'"
+
         jj=$(($j + $dt - 1))
         for k in $(seq -f "%05g" $j $jj); do cp ../${img}-0.png ./img$k.png; done
     elif [ "$c" = "-" ] ; then
         jj=$(($j + 3*$dt - 1))
         for k in $(seq -f "%05g" $j $jj); do cp ../${img}-1.png ./img$k.png; done
         j=$(($jj + 1))
+
+        t1=$(echo "scale=3;${j}*${dts}" | bc)
+        [ "${flash}" ] && sub3="${sub3}, hue=H=20*PI*t:s=cos(2*PI*t)+5+t:enable='between(t,${t0},${t1})'"
+
         jj=$(($j + $dt - 1))
         for k in $(seq -f "%05g" $j $jj); do cp ../${img}-0.png ./img$k.png; done
     elif [ "$c" = "/" ] ; then
@@ -285,7 +315,6 @@ for (( i=0; i<${#morse}; i++ )); do
     ii=$(($i + 1))
     j=$(($jj + 1))
 
-    t0=$(echo "scale=3;${j0}*${dts}" | bc)
     t1=$(echo "scale=3;${j}*${dts}" | bc)
     if [ "$ii" = "${#morse}" ] ; then
         t1=9999
@@ -299,7 +328,7 @@ for (( i=0; i<${#morse}; i++ )); do
         t1=$(echo "scale=3;${j}*${dts}" | bc)
         cc=$(($cc + 1))
         if [ "$cc" = "${#plain}" ] ; then
-            sub3="hue=H=20*PI*t:s=cos(2*PI*t)+5+t:enable='between(t,0.75,${t1})'"
+            #sub3="hue=H=20*PI*t:s=cos(2*PI*t)+5+t:enable='between(t,0.75,${t1})'"
             t1=9999
         fi
         if ! [ "${noplain}" ] ; then
@@ -315,8 +344,7 @@ jj=$(($j + $te*$dt - 1))
 for k in $(seq -f "%05g" $j $jj); do cp ../${img}-0.png ./img$k.png; done
 j=$(($jj + 1))
 
-#ffmpeg -hide_banner -loglevel error -y -r 1000/${dtms} -i img%05d.png -c:v libx264 -pix_fmt yuv420p -vf "${sub},${sub2}",${sub3} -r ${fps} out.mp4
-ffmpeg -hide_banner -loglevel error -y -r 1000/${dtms} -i img%05d.png -c:v libx264 -pix_fmt yuv420p -vf "${sub},${sub2}" -r ${fps} out.mp4
+ffmpeg -hide_banner -loglevel error -y -r 1000/${dtms} -i img%05d.png -c:v libx264 -pix_fmt yuv420p -vf "${sub},${sub2},${sub3}" -r ${fps} out.mp4
 
 ls=$(echo "scale=3;${dts}*(${j}-1)" | bc)
 ls=$(LANG=C LC_NUMERIC=C printf "%.3f" ${ls})
@@ -328,12 +356,42 @@ osms=$(LANG=C LC_NUMERIC=C printf "%.3f" ${osms})
 echo " - start:     ${os} s / ${osms} ms"
 echo " - length:    ${ls} s"
 
-curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=200&w=${speed}&s=20000&v=10" --output out0.wav
-curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=410&w=${speed}&s=20000&v=80" --output out1.wav
-curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=580&w=${speed}&s=20000&v=60" --output out2.wav
-curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=790&w=${speed}&s=20000&v=80" --output out3.wav
+nf=$(rand 10)
+mix=""
 
-ffmpeg -hide_banner -loglevel error -y -i out0.wav -i out1.wav -i out2.wav -i out3.wav -filter_complex amix=inputs=4:duration=first:dropout_transition=0 out.wav
+for f in `seq 0 1 ${nf}` ; do
+    freq=$((200 + $(rand 1500)))
+    vol=$((20 + $(rand 80)))
+    curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=${freq}&w=${speed}&s=48000&v=${vol}" --output out${f}.wav
+    mix="${mix} '|sox out${f}.wav -p'"
+done
+
+eval sox --norm -m ${mix} out.wav
+
+#curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=500&w=${speed}&s=48000&v=100" --output out0.wav
+#
+#rand () {
+#    echo $((1 + $RANDOM % ${1}))
+#}
+#
+#nr=$(rand 3)
+#nh=$(rand 6)
+#echo "repeat    : ${nr}"
+#echo "harmonics : ${nh}"
+#
+#for k in `seq 1 1 ${nr}` ; do
+#    mix="'|sox out0.wav -p gain 0'"
+#    for i in `seq 1 1 ${nh}` ; do
+#        p=$(rand 2000)
+#        g=$((10 + $(rand 10)))
+#        mix="${mix} '|sox out0.wav -p pitch ${p} gain -${g}'"
+#    done
+#    eval sox --norm -m ${mix} out.wav
+#    cp out.wav out0.wav
+#done
+
+#sox --norm -m "|sox out0.wav -p gain 0" "|sox out0.wav -p pitch 400 gain -6" "|sox out0.wav -p pitch 600 gain -4" "|sox out0.wav -p pitch 800 gain -2" out.wav
+#ffmpeg -hide_banner -loglevel error -y -i out0.wav -i out1.wav -i out2.wav -i out3.wav -filter_complex amix=inputs=4:duration=first:dropout_transition=0 out.wav
 
 if [ "${noise}" == "low" ] ; then
     sox -n noise.wav synth ${ls} brownnoise band -n 155 95 tremolo 1.3 10.0 fade q ${os} ${ls} 1
@@ -347,14 +405,16 @@ elif [ "${noise}" == "truck" ] ; then
     sox -m "|sox -n -p synth ${ls} brownnoise band -n 500 125 tremolo 1.3 20.0 fade q ${os} ${ls} 1" "|sox -n -p synth ${ls} brownnoise band -n 155 95 tremolo 4.3 50.0 fade q ${os} ${ls} 1 gain 2" noise.wav
 elif [ "${noise}" == "submarine" ] ; then
     sox -m "|sox -n -p synth ${ls} brownnoise band -n 500 125 tremolo 4.3 50.0 fade q ${os} ${ls} 1 gain 2" "|sox -n -p synth ${ls} brownnoise band -n 155 95 tremolo 1.3 20.0 fade q ${os} ${ls} 1 gain 1" noise.wav
+else
+    sox -n noise.wav synth ${ls}
+    noisevolume=0
 fi
 
-noisevolume_f=$(echo "scale=3;${noisevolume}/100" | bc)
+noisevolume_db=$(echo "scale=3;20*l(${noisevolume}/100)" | bc -l)
 
-if [ "${noise}" ] ; then
-    ffmpeg -hide_banner -loglevel error -y -i noise.wav -i out.wav -filter_complex "[0]volume=${noisevolume_f}[a];[1]adelay=${osms}|${osms}[b];[a][b]amix=inputs=2:duration=first:dropout_transition=10" out.wav
-fi
+sox -m "|sox out.wav -p pad ${os}" "|sox noise.wav -p gain ${noisevolume_db}" out1.wav
+#ffmpeg -hide_banner -loglevel error -y -i noise.wav -i out.wav -filter_complex "[0]volume=${noisevolume_f}[a];[1]adelay=${osms}|${osms}[b];[a][b]amix=inputs=2:duration=first:dropout_transition=10" out.wav
 
-ffmpeg -hide_banner -loglevel error -y -i out.mp4 -itsoffset 00:00:00 -i out.wav -map 0:0 -map 1:0 -c:v copy -c:a aac -async 1 final.mp4
+ffmpeg -hide_banner -loglevel error -y -i out.mp4 -itsoffset 00:00:00 -i out1.wav -map 0:0 -map 1:0 -c:v copy -c:a aac -async 1 final.mp4
 
 echo " - size:      $(du -h final.mp4 | awk '{print $1}')"
