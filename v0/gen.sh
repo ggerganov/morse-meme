@@ -9,7 +9,8 @@ fontcolor="0xffffff"
 nocode=
 noplain=
 img=cat512
-soundpreset=
+noise=
+noisevolume=50
 
 print_usage () {
     echo "Usage: ${0} [options] \"meme text\""
@@ -22,6 +23,8 @@ print_usage () {
     echo "-fc color     font color (e.g 0xffffff)"
     echo "-nc           hide morse code text"
     echo "-np           hide plain text"
+    echo "-n noise      add background noise"
+    echo "-nv n         noise volume [0-100]"
     echo ""
     echo "Examples:"
     echo "      ${0} \"test\""
@@ -68,6 +71,16 @@ while [[ $# -gt 0 ]]; do
             noplain=YES
             shift
             ;;
+        -n|--noise)
+            noise="$2"
+            shift
+            shift
+            ;;
+        -nv|--noise-volume)
+            noisevolume="$2"
+            shift
+            shift
+            ;;
         -h|--help)
             print_help=YES
             shift
@@ -83,13 +96,6 @@ if [ ${print_help} ] ; then
     print_usage
     exit 0
 fi
-
-valid_color () {
-    if ! echo $1 | grep -G -q "^0x[0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F]$" ; then
-        echo "Invalid color: ${1}"
-        exit 1
-    fi
-}
 
 valid_integer () {
     if ! [ "${1}" -eq "${1}" ] 2> /dev/null; then
@@ -108,12 +114,30 @@ valid_integer () {
     fi
 }
 
+valid_color () {
+    if ! echo $1 | grep -G -q "^0x[0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F][0-9,a-f,A-F]$" ; then
+        echo "Invalid color: ${1}"
+        exit 1
+    fi
+}
+
+valid_noise () {
+    list="low mid high helicopter truck submarine"
+    if [ "${1}" ] && ! [[ ${list} =~ (^|[[:space:]])${1}($|[[:space:]]) ]] ; then
+        echo "Invalid noise: ${1}"
+        exit 1
+    fi
+}
+
 valid_integer "${speed}" "speed" "wpm" 5 140
 valid_integer "${ts_ms}" "time-start" "ms" 0 5000
 valid_integer "${te_ms}" "time-end" "ms" 0 10000
 valid_integer "${fontsize}" "fontsize" "px" 8 256
 
 valid_color "${fontcolor}"
+
+valid_noise "${noise}"
+valid_integer "${noisevolume}" "noise volume" "" 0 100
 
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
@@ -208,16 +232,20 @@ dtms=$(echo "scale=2;1200/${speed}" | bc)
   te=$(echo "scale=0;${te_ms}/${dtms}" | bc)
   ts=$(echo "scale=0;${ts_ms}/${dtms}" | bc)
 
-echo " - text:      ${plain}"
-echo " - morse:     ${morse}"
-echo " - speed:     ${speed} wpm"
-echo " - dot:       ${dtms} ms"
-echo " - fps:       ${fps}"
-echo " - font:      ${font}"
-echo " - fontsize:  ${fontsize} px"
-echo " - fontcolor: ${fontcolor}"
-echo " - nocode:    ${nocode}"
-echo " - noplain:   ${noplain}"
+echo " - text:          ${plain}"
+echo " - morse:         ${morse}"
+echo " - speed:         ${speed} wpm"
+echo " - dot:           ${dtms} ms"
+echo " - fps:           ${fps}"
+echo " - font:          ${font}"
+echo " - fontsize:      ${fontsize} px"
+echo " - fontcolor:     ${fontcolor}"
+echo " - nocode:        ${nocode}"
+echo " - noplain:       ${noplain}"
+echo " - timestart:     ${ts_ms} ms"
+echo " - timeend:       ${te_ms} ms"
+echo " - noise:         ${noise}"
+echo " - noisevolume:   ${noisevolume}"
 
 dt=1
 cc=0
@@ -307,8 +335,25 @@ curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=790&w=${speed}&s=2
 
 ffmpeg -hide_banner -loglevel error -y -i out0.wav -i out1.wav -i out2.wav -i out3.wav -filter_complex amix=inputs=4:duration=first:dropout_transition=0 out.wav
 
-sox -n -r 48k -b 16 noise.wav synth ${ls} brownnoise band -n 1200 200 tremolo 2.1 20.1 fade q ${os} ${ls} 1
-ffmpeg -hide_banner -loglevel error -y -i noise.wav -i out.wav -filter_complex "[0]adelay=0|0[a];[1]adelay=${osms}|${osms}[b];[a][b]amix=inputs=2:duration=first:dropout_transition=10" out.wav
+if [ "${noise}" == "low" ] ; then
+    sox -n noise.wav synth ${ls} brownnoise band -n 155 95 tremolo 1.3 10.0 fade q ${os} ${ls} 1
+elif [ "${noise}" == "mid" ] ; then
+    sox -n noise.wav synth ${ls} brownnoise band -n 500 125 tremolo 1.3 10.0 fade q ${os} ${ls} 1
+elif [ "${noise}" == "high" ] ; then
+    sox -n noise.wav synth ${ls} brownnoise band -n 2000 500 tremolo 1.3 10.0 fade q ${os} ${ls} 1
+elif [ "${noise}" == "helicopter" ] ; then
+    sox -m "|sox -n -p synth ${ls} brownnoise band -n 500 50 tremolo 1.3 10.0 fade q ${os} ${ls} 1" "|sox -n -p synth ${ls} pinknoise band -n 500 250 tremolo 10.0 90.0 fade q ${os} ${ls} 1 gain 2" noise.wav
+elif [ "${noise}" == "truck" ] ; then
+    sox -m "|sox -n -p synth ${ls} brownnoise band -n 500 125 tremolo 1.3 20.0 fade q ${os} ${ls} 1" "|sox -n -p synth ${ls} brownnoise band -n 155 95 tremolo 4.3 50.0 fade q ${os} ${ls} 1 gain 2" noise.wav
+elif [ "${noise}" == "submarine" ] ; then
+    sox -m "|sox -n -p synth ${ls} brownnoise band -n 500 125 tremolo 4.3 50.0 fade q ${os} ${ls} 1 gain 2" "|sox -n -p synth ${ls} brownnoise band -n 155 95 tremolo 1.3 20.0 fade q ${os} ${ls} 1 gain 1" noise.wav
+fi
+
+noisevolume_f=$(echo "scale=3;${noisevolume}/100" | bc)
+
+if [ "${noise}" ] ; then
+    ffmpeg -hide_banner -loglevel error -y -i noise.wav -i out.wav -filter_complex "[0]volume=${noisevolume_f}[a];[1]adelay=${osms}|${osms}[b];[a][b]amix=inputs=2:duration=first:dropout_transition=10" out.wav
+fi
 
 ffmpeg -hide_banner -loglevel error -y -i out.mp4 -itsoffset 00:00:00 -i out.wav -map 0:0 -map 1:0 -c:v copy -c:a aac -async 1 final.mp4
 
