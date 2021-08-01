@@ -9,6 +9,7 @@ fontcolor="0xffffff"
 nocode=
 noplain=
 img=cat512
+soundpreset=
 
 print_usage () {
     echo "Usage: ${0} [options] \"meme text\""
@@ -289,13 +290,26 @@ j=$(($jj + 1))
 #ffmpeg -hide_banner -loglevel error -y -r 1000/${dtms} -i img%05d.png -c:v libx264 -pix_fmt yuv420p -vf "${sub},${sub2}",${sub3} -r ${fps} out.mp4
 ffmpeg -hide_banner -loglevel error -y -r 1000/${dtms} -i img%05d.png -c:v libx264 -pix_fmt yuv420p -vf "${sub},${sub2}" -r ${fps} out.mp4
 
-os=$(echo "scale=3;$dts*($ts-1)" | bc)
-os=$(LANG=C LC_NUMERIC=C printf "%06.3f" $os)
+ls=$(echo "scale=3;${dts}*(${j}-1)" | bc)
+ls=$(LANG=C LC_NUMERIC=C printf "%.3f" ${ls})
+os=$(echo "scale=3;${dts}*(${ts}-1)" | bc)
+os=$(LANG=C LC_NUMERIC=C printf "%.3f" ${os})
+osms=$(echo "scale=3;${dtms}*(${ts}-1)" | bc)
+osms=$(LANG=C LC_NUMERIC=C printf "%.3f" ${osms})
 
-curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=500&w=${speed}&s=20000" --output out0.wav
-curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=700&w=${speed}&s=20000" --output out1.wav
-curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=1500&w=${speed}&s=20000" --output out2.wav
-curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=2100&w=${speed}&s=20000" --output out3.wav
+echo " - start:     ${os} s / ${osms} ms"
+echo " - length:    ${ls} s"
+
+curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=200&w=${speed}&s=20000&v=10" --output out0.wav
+curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=410&w=${speed}&s=20000&v=80" --output out1.wav
+curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=580&w=${speed}&s=20000&v=60" --output out2.wav
+curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=790&w=${speed}&s=20000&v=80" --output out3.wav
 
 ffmpeg -hide_banner -loglevel error -y -i out0.wav -i out1.wav -i out2.wav -i out3.wav -filter_complex amix=inputs=4:duration=first:dropout_transition=0 out.wav
-ffmpeg -hide_banner -loglevel error -y -i out.mp4 -itsoffset 00:00:${os} -i out.wav -map 0:0 -map 1:0 -c:v copy -c:a aac -async 1 final.mp4
+
+sox -n -r 48k -b 16 noise.wav synth ${ls} brownnoise band -n 1200 200 tremolo 2.1 20.1 fade q ${os} ${ls} 1
+ffmpeg -hide_banner -loglevel error -y -i noise.wav -i out.wav -filter_complex "[0]adelay=0|0[a];[1]adelay=${osms}|${osms}[b];[a][b]amix=inputs=2:duration=first:dropout_transition=10" out.wav
+
+ffmpeg -hide_banner -loglevel error -y -i out.mp4 -itsoffset 00:00:00 -i out.wav -map 0:0 -map 1:0 -c:v copy -c:a aac -async 1 final.mp4
+
+echo " - size:      $(du -h final.mp4 | awk '{print $1}')"
