@@ -188,32 +188,6 @@ w#^||
 x#|^^|
 y#|^||
 z#||^^
-а#^|
-б#|^^^
-ц#|^|^
-д#|^^
-е#^
-ф#^^|^^
-г#||^
-х#^^^^
-и#^^
-й#^|||
-к#|^|
-л#^|^^
-м#||
-н#|^
-о#|||
-п#^||^
-щ#||^|
-р#^|^
-с#^^^
-т#|
-у#^^|
-ж#^^^|
-в#^||
-ь#|^^|
-ъ#|^||
-з#||^^
 1#^||||
 2#^^|||
 3#^^^||
@@ -244,6 +218,35 @@ _#^^||^|
 @#^||^|^
 EOM
 
+read -r -d '' mapping_latin << EOM
+а#a
+б#b
+ц#c
+д#d
+е#e
+ф#f
+г#g
+х#h
+и#i
+й#j
+к#k
+л#l
+м#m
+н#n
+о#o
+п#p
+щ#q
+р#r
+с#s
+т#t
+у#u
+ж#v
+в#w
+ь#x
+ъ#y
+з#z
+EOM
+
 #inp=$(echo "$1" | tr -s ' ' | sed 's/[^[:alnum:]\ .,\x27\?!/()&:;=+_"$@-]//g')
 inp=$(echo "$1" | tr -s ' ' | sed 's/[^[:alnum:]\ .,\x27\?!/();=_"@-]//g')
 
@@ -259,12 +262,22 @@ fi
 #inp=$(echo "${plain}" | tr [:upper:] [:lower:])
 inp=$(echo "${plain}" | sed 's/.*/\L&/')
 
+# convert to latin
+for pair in ${mapping_latin} ; do
+    letter=$(echo ${pair} | cut -d \# -f 1)
+    code=$(echo ${pair} | cut -d \# -f 2)
+    out=$(echo ${inp} | sed "s/${letter}/${code}/g")
+    inp="${out}"
+done
+
+plain_latin=${inp}
+
 # convert to morse code text
 for pair in ${mapping} ; do
     letter=$(echo ${pair} | cut -d \# -f 1)
     code=$(echo ${pair} | cut -d \# -f 2)
     out=$(echo ${inp} | sed "s/${letter}/${code}#/g")
-    inp="$out"
+    inp="${out}"
 done
 
 out=$(echo ${inp} | sed 's/\^/./g' | sed 's/|/-/g' | sed 's| | / |g' | sed 's/\#/ /g')
@@ -392,13 +405,13 @@ mix=""
 for f in `seq 0 1 ${nf}` ; do
     freq=$((200 + $(rand 1500)))
     vol=$((20 + $(rand 80)))
-    curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=${freq}&w=${speed}&s=48000&v=${vol}" --output out${f}.wav
+    curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain_latin}&f=${freq}&w=${speed}&s=48000&v=${vol}" --output out${f}.wav
     mix="${mix} '|sox out${f}.wav -p'"
 done
 
 eval sox --norm -m ${mix} out.wav
 
-#curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain}&f=500&w=${speed}&s=48000&v=100" --output out0.wav
+#curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain_latin}&f=500&w=${speed}&s=48000&v=100" --output out0.wav
 #
 #rand () {
 #    echo $((1 + $RANDOM % ${1}))
