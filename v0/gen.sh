@@ -248,7 +248,7 @@ read -r -d '' mapping_latin << EOM
 EOM
 
 #inp=$(echo "$1" | tr -s ' ' | sed 's/[^[:alnum:]\ .,\x27\?!/()&:;=+_"$@-]//g')
-inp=$(echo "$1" | tr -s ' ' | sed 's/[^[:alnum:]\ .,\x27\?!/();=_"@-]//g')
+inp=$(echo "$1" | tr -s ' ' | sed 's/[^[:alnum:] .,?!/();=_"@-]//g')
 
 # plain english text
 plain="${inp}"
