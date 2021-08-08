@@ -13,16 +13,18 @@ sudo apt-get install ffmpeg sox
 ## using
 
 ```bash
-cd v0
 ./gen.sh
 Usage: ./gen.sh [options] "meme text"
 
 Options:
+-i fname      image filename prefix
 -s n          Tx speed in WPM
 -ts n         start pause in ms
 -te n         end pause in ms
 -fs n         font size in px
 -fc color     font color (e.g 0xffffff)
+-tx n         text x pos in %
+-ty n         text y pos in %
 -nc           hide morse code text
 -np           hide plain text
 -n type       add background noise
@@ -32,6 +34,7 @@ Options:
 
 Examples:
       ./gen.sh "test"
+      ./gen.sh -i doge0-500 "much wow"
       ./gen.sh -s 50 "2 fast"
       ./gen.sh -ts 3000 -s 50 "pause"
       ./gen.sh -fs 48 "big"

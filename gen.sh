@@ -30,6 +30,8 @@ print_usage () {
     echo "-te n         end pause in ms"
     echo "-fs n         font size in px"
     echo "-fc color     font color (e.g 0xffffff)"
+    echo "-tx n         text x pos in %"
+    echo "-ty n         text y pos in %"
     echo "-nc           hide morse code text"
     echo "-np           hide plain text"
     echo "-n type       add background noise"
@@ -176,8 +178,8 @@ valid_option () {
     fi
 }
 
-img0="../${img}-0.png"
-img1="../${img}-1.png"
+img0="${img}-0.png"
+img1="${img}-1.png"
 
 valid_image ${img0}
 valid_image ${img1}
