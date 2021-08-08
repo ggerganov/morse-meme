@@ -8,7 +8,7 @@ fontsize=16
 fontcolor="0xffffff"
 nocode=
 noplain=
-img=cat512
+img=cat0-512
 noise=
 noisevolume=75
 flash=
@@ -22,6 +22,7 @@ print_usage () {
     echo "Usage: ${0} [options] \"meme text\""
     echo ""
     echo "Options:"
+    echo "-i fname      image filename prefix"
     echo "-s n          Tx speed in WPM"
     echo "-ts n         start pause in ms"
     echo "-te n         end pause in ms"
@@ -36,6 +37,7 @@ print_usage () {
     echo ""
     echo "Examples:"
     echo "      ${0} \"test\""
+    echo "      ${0} -i doge0-500 \"much wow\""
     echo "      ${0} -s 50 \"2 fast\""
     echo "      ${0} -ts 3000 -s 50 \"pause\""
     echo "      ${0} -fs 48 \"big\""
@@ -46,6 +48,11 @@ while [[ $# -gt 0 ]]; do
     key="$1"
 
     case $key in
+        -i|--image)
+            img="$2"
+            shift
+            shift
+            ;;
         -s|--speed)
             speed="$2"
             shift
@@ -114,6 +121,18 @@ if [ ${print_help} ] ; then
     exit 0
 fi
 
+valid_image () {
+    if ! [ -f ${1} ] ; then
+        echo "Cannot find '${1}'"
+        exit 1
+    fi
+
+    if ! [[ $(file ${1} | grep PNG) = *PNG* ]] ; then
+        echo "Invalid image '${1}' - not in PNG format"
+        exit 1
+    fi
+}
+
 valid_integer () {
     if ! [ "${1}" -eq "${1}" ] 2> /dev/null; then
         echo "Invalid ${2}: ${1} ${3} - must be an integer"
@@ -144,6 +163,12 @@ valid_option () {
         exit 1
     fi
 }
+
+img0="../${img}-0.png"
+img1="../${img}-1.png"
+
+valid_image ${img0}
+valid_image ${img1}
 
 valid_integer "${speed}" "speed" "wpm" 5 140
 valid_integer "${ts_ms}" "time-start" "ms" 0 5000
@@ -291,6 +316,7 @@ dtms=$(echo "scale=2;1200/${speed}" | bc)
   te=$(echo "scale=0;${te_ms}/${dtms}" | bc)
   ts=$(echo "scale=0;${ts_ms}/${dtms}" | bc)
 
+echo " - image:         ${img}"
 echo " - text:          ${plain}"
 echo " - morse:         ${morse}"
 echo " - speed:         ${speed} wpm"
@@ -318,7 +344,7 @@ sub2="drawtext=fontfile=${font}:text=''"
 sub3="drawtext=fontfile=${font}:text=''"
 
 jj=$(($j + $ts*$dt - 1))
-for k in $(seq -f "%05g" $j $jj); do cp ../${img}-0.png ./img$k.png; done
+for k in $(seq -f "%05g" $j $jj); do cp ${img0} ./img$k.png; done
 j=$(($jj + 1))
 jj0=$j
 for (( i=0; i<${#morse}; i++ )); do
@@ -328,30 +354,30 @@ for (( i=0; i<${#morse}; i++ )); do
     c="${morse:$i:1}"
     if [ "$c" = "." ] ; then
         jj=$(($j + $dt - 1))
-        for k in $(seq -f "%05g" $j $jj); do cp ../${img}-1.png ./img$k.png; done
+        for k in $(seq -f "%05g" $j $jj); do cp ${img1} ./img$k.png; done
         j=$(($jj + 1))
 
         t1=$(echo "scale=3;${j}*${dts}" | bc)
         [ "${flash}" ] && sub3="${sub3}, hue=H=20*PI*t:s=cos(2*PI*t)+5+t:enable='between(t,${t0},${t1})'"
 
         jj=$(($j + $dt - 1))
-        for k in $(seq -f "%05g" $j $jj); do cp ../${img}-0.png ./img$k.png; done
+        for k in $(seq -f "%05g" $j $jj); do cp ${img0} ./img$k.png; done
     elif [ "$c" = "-" ] ; then
         jj=$(($j + 3*$dt - 1))
-        for k in $(seq -f "%05g" $j $jj); do cp ../${img}-1.png ./img$k.png; done
+        for k in $(seq -f "%05g" $j $jj); do cp ${img1} ./img$k.png; done
         j=$(($jj + 1))
 
         t1=$(echo "scale=3;${j}*${dts}" | bc)
         [ "${flash}" ] && sub3="${sub3}, hue=H=20*PI*t:s=cos(2*PI*t)+5+t:enable='between(t,${t0},${t1})'"
 
         jj=$(($j + $dt - 1))
-        for k in $(seq -f "%05g" $j $jj); do cp ../${img}-0.png ./img$k.png; done
+        for k in $(seq -f "%05g" $j $jj); do cp ${img0} ./img$k.png; done
     elif [ "$c" = "/" ] ; then
         jj=$(($j + 0*$dt - 1))
-        for k in $(seq -f "%05g" $j $jj); do cp ../${img}-0.png ./img$k.png; done
+        for k in $(seq -f "%05g" $j $jj); do cp ${img0} ./img$k.png; done
     else
         jj=$(($j + 2*$dt - 1))
-        for k in $(seq -f "%05g" $j $jj); do cp ../${img}-0.png ./img$k.png; done
+        for k in $(seq -f "%05g" $j $jj); do cp ${img0} ./img$k.png; done
     fi
     ii=$(($i + 1))
     j=$(($jj + 1))
@@ -382,7 +408,7 @@ for (( i=0; i<${#morse}; i++ )); do
 done
 
 jj=$(($j + $te*$dt - 1))
-for k in $(seq -f "%05g" $j $jj); do cp ../${img}-0.png ./img$k.png; done
+for k in $(seq -f "%05g" $j $jj); do cp ${img0} ./img$k.png; done
 j=$(($jj + 1))
 
 ffmpeg -hide_banner -loglevel error -y -r 1000/${dtms} -i img%05d.png -c:v libx264 -pix_fmt yuv420p -vf "${sub},${sub2},${sub3}" -r ${fps} out.mp4
