@@ -23,6 +23,7 @@ Options:
 -te n         end pause in ms
 -fs n         font size in px
 -fc color     font color (e.g 0xffffff)
+-fba n        font background alpha in %
 -tx n         text x pos in %
 -ty n         text y pos in %
 -nc           hide morse code text
@@ -38,10 +39,12 @@ Examples:
       ./gen.sh -s 50 "2 fast"
       ./gen.sh -ts 3000 -s 50 "pause"
       ./gen.sh -fs 48 "big"
+```
 
+## examples
+
+```bash
 ./gen.sh "CHEEZBURGER"
-
-vlc final.mp4
 ```
 
 https://user-images.githubusercontent.com/1991296/127513983-c6470008-6f95-4666-a745-76962ac7d2d5.mp4
