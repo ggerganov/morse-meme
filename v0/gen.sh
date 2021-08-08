@@ -6,6 +6,8 @@ te_ms=2000
 font="DejaVuSans.ttf"
 fontsize=16
 fontcolor="0xffffff"
+textx=10
+texty=85
 nocode=
 noplain=
 img=cat0-512
@@ -75,6 +77,16 @@ while [[ $# -gt 0 ]]; do
             ;;
         -fc|--font-color)
             fontcolor="$2"
+            shift
+            shift
+            ;;
+        -tx|--text-x)
+            textx="$2"
+            shift
+            shift
+            ;;
+        -ty|--text-y)
+            texty="$2"
             shift
             shift
             ;;
@@ -159,7 +171,7 @@ valid_color () {
 
 valid_option () {
     if [ "${1}" ] && ! [[ ${3} =~ (^|[[:space:]])${1}($|[[:space:]]) ]] ; then
-        echo "Invalid ${2}: ${1}"
+        echo "Invalid ${2}: ${1}, valid options are: ${3}"
         exit 1
     fi
 }
@@ -174,6 +186,8 @@ valid_integer "${speed}" "speed" "wpm" 5 140
 valid_integer "${ts_ms}" "time-start" "ms" 0 5000
 valid_integer "${te_ms}" "time-end" "ms" 0 10000
 valid_integer "${fontsize}" "fontsize" "px" 8 256
+valid_integer "${textx}" "textx" "%" 0 100
+valid_integer "${texty}" "texty" "%" 0 100
 
 valid_color "${fontcolor}"
 
@@ -325,6 +339,8 @@ echo " - fps:           ${fps}"
 echo " - font:          ${font}"
 echo " - fontsize:      ${fontsize} px"
 echo " - fontcolor:     ${fontcolor}"
+echo " - textx:         ${textx} %"
+echo " - texty:         ${texty} %"
 echo " - nocode:        ${nocode}"
 echo " - noplain:       ${noplain}"
 echo " - timestart:     ${ts_ms} ms"
@@ -389,7 +405,7 @@ for (( i=0; i<${#morse}; i++ )); do
         t1=9999
     fi
     if ! [ "${nocode}" ] ; then
-        sub="${sub}, drawtext=fontfile=${font}:text='${morse:0:$ii}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@1.0:boxborderw=5:x=(w)/6:y=4*(h-text_h)/5:enable='between(t,${t0},${t1})'"
+        sub="${sub}, drawtext=fontfile=${font}:text='${morse:0:$ii}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@1.0:boxborderw=5:x=${textx}*main_w/100:y=${texty}*main_h/100:enable='between(t,${t0},${t1})'"
     fi
 
     if [ "$c" = " " ] ; then
@@ -401,7 +417,7 @@ for (( i=0; i<${#morse}; i++ )); do
             t1=9999
         fi
         if ! [ "${noplain}" ] ; then
-            sub2="${sub2}, drawtext=fontfile=${font}:text='${plain:0:$cc}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@1.0:boxborderw=5:x=(w)/6:y=5*(h)/6:enable='between(t,${t0},${t1})'"
+            sub2="${sub2}, drawtext=fontfile=${font}:text='${plain:0:$cc}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@1.0:boxborderw=5:x=${textx}*main_w/100:y=${texty}*main_h/100 + 1.50*${fontsize}:enable='between(t,${t0},${t1})'"
         fi
         jj0=$j
     elif [ "$c" = "/" ] ; then
