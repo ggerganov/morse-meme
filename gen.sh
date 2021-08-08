@@ -6,6 +6,7 @@ te_ms=2000
 font="DejaVuSans.ttf"
 fontsize=16
 fontcolor="0xffffff"
+fontba=100
 textx=10
 texty=85
 nocode=
@@ -30,6 +31,7 @@ print_usage () {
     echo "-te n         end pause in ms"
     echo "-fs n         font size in px"
     echo "-fc color     font color (e.g 0xffffff)"
+    echo "-fba n        font background alpha in %"
     echo "-tx n         text x pos in %"
     echo "-ty n         text y pos in %"
     echo "-nc           hide morse code text"
@@ -79,6 +81,11 @@ while [[ $# -gt 0 ]]; do
             ;;
         -fc|--font-color)
             fontcolor="$2"
+            shift
+            shift
+            ;;
+        -fba|--font-background-alpha)
+            fontba="$2"
             shift
             shift
             ;;
@@ -191,7 +198,8 @@ valid_integer "${fontsize}" "fontsize" "px" 8 256
 valid_integer "${textx}" "textx" "%" 0 100
 valid_integer "${texty}" "texty" "%" 0 100
 
-valid_color "${fontcolor}"
+valid_color   "${fontcolor}"
+valid_integer "${fontba}" "font-background-alpha" "%" 0 100
 
 valid_option "${noise}" "noise" "low mid high helicopter truck submarine"
 valid_integer "${noisevolume}" "noise volume" "" 0 100
@@ -331,6 +339,7 @@ dtms=$(echo "scale=2;1200/${speed}" | bc)
  fps=$(echo "scale=0;1000/${dtms} + 1" | bc)
   te=$(echo "scale=0;${te_ms}/${dtms}" | bc)
   ts=$(echo "scale=0;${ts_ms}/${dtms}" | bc)
+ fba=$(echo "scale=2;${fontba}/100" | bc)
 
 echo " - image:         ${img}"
 echo " - text:          ${plain}"
@@ -341,6 +350,7 @@ echo " - fps:           ${fps}"
 echo " - font:          ${font}"
 echo " - fontsize:      ${fontsize} px"
 echo " - fontcolor:     ${fontcolor}"
+echo " - fontba:        ${fontba} %"
 echo " - textx:         ${textx} %"
 echo " - texty:         ${texty} %"
 echo " - nocode:        ${nocode}"
@@ -407,7 +417,7 @@ for (( i=0; i<${#morse}; i++ )); do
         t1=9999
     fi
     if ! [ "${nocode}" ] ; then
-        sub="${sub}, drawtext=fontfile=${font}:text='${morse:0:$ii}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@1.0:boxborderw=5:x=${textx}*main_w/100:y=${texty}*main_h/100:enable='between(t,${t0},${t1})'"
+        sub="${sub}, drawtext=fontfile=${font}:text='${morse:0:$ii}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@${fba}:boxborderw=5:x=${textx}*main_w/100:y=${texty}*main_h/100:enable='between(t,${t0},${t1})'"
     fi
 
     if [ "$c" = " " ] ; then
@@ -419,7 +429,7 @@ for (( i=0; i<${#morse}; i++ )); do
             t1=9999
         fi
         if ! [ "${noplain}" ] ; then
-            sub2="${sub2}, drawtext=fontfile=${font}:text='${plain:0:$cc}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@1.0:boxborderw=5:x=${textx}*main_w/100:y=${texty}*main_h/100 + 1.50*${fontsize}:enable='between(t,${t0},${t1})'"
+            sub2="${sub2}, drawtext=fontfile=${font}:text='${plain:0:$cc}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@${fba}:boxborderw=5:x=${textx}*main_w/100:y=${texty}*main_h/100 + 1.50*${fontsize}:enable='between(t,${t0},${t1})'"
         fi
         jj0=$j
     elif [ "$c" = "/" ] ; then
