@@ -333,6 +333,7 @@ out=$(echo ${inp} | sed 's/\^/./g' | sed 's/|/-/g' | sed 's| | / |g' | sed 's/\#
 
 # morse code text, example: ... --- ... / -.-. --.-
 morse="${out}"
+morsex=$(echo "${out}" | sed -e "s/\// /g")
 
 dtms=$(echo "scale=2;1200/${speed}" | bc)
  dts=$(echo "scale=3;${dtms}/1000" | bc)
@@ -417,7 +418,7 @@ for (( i=0; i<${#morse}; i++ )); do
         t1=9999
     fi
     if ! [ "${nocode}" ] ; then
-        sub="${sub}, drawtext=fontfile=${font}:text='${morse:0:$ii}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@${fba}:boxborderw=5:x=${textx}*main_w/100:y=${texty}*main_h/100:enable='between(t,${t0},${t1})'"
+        sub="${sub}, drawtext=fontfile=${font}:text='${morsex:0:$ii}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=1:shadowy=1:box=1:boxcolor=black@${fba}:boxborderw=5:x=${textx}*main_w/100:y=${texty}*main_h/100:enable='between(t,${t0},${t1})'"
     fi
 
     if [ "$c" = " " ] ; then

@@ -36,7 +36,7 @@ Options:
 
 Examples:
       ./gen.sh "test"
-      ./gen.sh -i doge0-500 "much wow"
+      ./gen.sh -i doge0-512 "much wow"
       ./gen.sh -s 50 "2 fast"
       ./gen.sh -ts 3000 -s 50 "pause"
       ./gen.sh -fs 48 "big"
@@ -51,7 +51,7 @@ Examples:
 https://user-images.githubusercontent.com/1991296/128639234-fde42de5-aae4-478b-966b-f5ccd898fd5e.mp4
 
 ```bash
-./gen.sh -i doge0-500 "many wow" -s 20 -fs 24 -tx 45 -ty 12 -fc 0xff00ff -nc -fba 0
+./gen.sh -i doge0-512 "many wow" -s 20 -fs 24 -tx 45 -ty 12 -fc 0xff00ff -nc -fba 0
 ```
 
 https://user-images.githubusercontent.com/1991296/128639139-2b246c43-464f-4493-9222-da89b94353c8.mp4
