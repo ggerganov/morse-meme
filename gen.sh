@@ -16,6 +16,7 @@ noise=
 noisevolume=75
 flash=
 sound="random"
+nf=0
 
 rand () {
     echo $((1 + $RANDOM % ${1}))
@@ -40,6 +41,7 @@ print_usage () {
     echo "-nv n         noise volume [percent 0-100]"
     echo "-f            color flashes"
     echo "-st type      sound type"
+    echo "-nf n         number of frequencies (0 - random)"
     echo ""
     echo "Examples:"
     echo "      ${0} \"test\""
@@ -122,6 +124,11 @@ while [[ $# -gt 0 ]]; do
             shift
             shift
             ;;
+        -nf|--num-freq)
+            nf="$2"
+            shift
+            shift
+            ;;
         -f|--flash)
             flash=YES
             shift
@@ -201,10 +208,11 @@ valid_integer "${texty}" "texty" "%" 0 100
 valid_color   "${fontcolor}"
 valid_integer "${fontba}" "font-background-alpha" "%" 0 100
 
-valid_option "${noise}" "noise" "low mid high helicopter truck submarine"
+valid_option  "${noise}" "noise" "low mid high helicopter truck submarine"
 valid_integer "${noisevolume}" "noise volume" "" 0 100
 
-valid_option "${sound}" "sound" "random"
+valid_option  "${sound}" "sound" "harmonics random"
+valid_integer "${nf}" "num freq" "" 0 10
 
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
@@ -358,6 +366,8 @@ echo " - nocode:        ${nocode}"
 echo " - noplain:       ${noplain}"
 echo " - timestart:     ${ts_ms} ms"
 echo " - timeend:       ${te_ms} ms"
+echo " - sound:         ${sound}"
+echo " - nf:            ${nf}"
 echo " - noise:         ${noise}"
 echo " - noisevolume:   ${noisevolume}"
 echo " - flash:         ${flash}"
@@ -456,15 +466,28 @@ osms=$(LANG=C LC_NUMERIC=C printf "%.3f" ${osms})
 echo " - start:     ${os} s / ${osms} ms"
 echo " - length:    ${ls} s"
 
-nf=$(rand 10)
+if [ "${nf}" -eq "0" ] ; then
+    nf=$(rand 6)
+fi
+
 mix=""
 
-for f in `seq 0 1 ${nf}` ; do
-    freq=$((200 + $(rand 1500)))
-    vol=$((20 + $(rand 80)))
-    curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain_latin}&f=${freq}&w=${speed}&s=48000&v=${vol}" --output ${dst}/out${f}.wav
-    mix="${mix} '|sox ${dst}/out${f}.wav -p'"
-done
+if [ "${sound}" == "harmonics" ] ; then
+    f0=$((100 + $(rand 400)))
+    for f in `seq 0 1 ${nf}` ; do
+        freq=$(((${f} + 1)*${f0}))
+        vol=$((20 + $(rand 80)))
+        curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain_latin}&f=${freq}&w=${speed}&s=48000&v=${vol}" --output ${dst}/out${f}.wav
+        mix="${mix} '|sox ${dst}/out${f}.wav -p'"
+    done
+else
+    for f in `seq 0 1 ${nf}` ; do
+        freq=$((200 + $(rand 1500)))
+        vol=$((20 + $(rand 80)))
+        curl -sS "https://ggmorse-to-file.ggerganov.com/?m=${plain_latin}&f=${freq}&w=${speed}&s=48000&v=${vol}" --output ${dst}/out${f}.wav
+        mix="${mix} '|sox ${dst}/out${f}.wav -p'"
+    done
+fi
 
 eval sox --norm -m ${mix} ${dst}/out.wav
 
