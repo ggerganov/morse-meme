@@ -429,7 +429,7 @@ for (( i=0; i<${#morse}; i++ )); do
             t1=9999
         fi
         if ! [ "${noplain}" ] ; then
-            sub2="${sub2}, drawtext=fontfile=${font}:text='${plain:0:$cc}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@${fba}:boxborderw=5:x=${textx}*main_w/100:y=${texty}*main_h/100 + 1.50*${fontsize}:enable='between(t,${t0},${t1})'"
+            sub2="${sub2}, drawtext=fontfile=${font}:text='${plain:0:$cc}':fontcolor=${fontcolor}:fontsize=${fontsize}:shadowx=2:shadowy=2:box=1:boxcolor=black@${fba}:boxborderw=5:x=${textx}*main_w/100:y=${texty}*main_h/100 + 1.25*${fontsize}:enable='between(t,${t0},${t1})'"
         fi
         jj0=$j
     elif [ "$c" = "/" ] ; then
