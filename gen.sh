@@ -43,7 +43,7 @@ print_usage () {
     echo ""
     echo "Examples:"
     echo "      ${0} \"test\""
-    echo "      ${0} -i doge0-500 \"much wow\""
+    echo "      ${0} -i doge0-512 \"much wow\""
     echo "      ${0} -s 50 \"2 fast\""
     echo "      ${0} -ts 3000 -s 50 \"pause\""
     echo "      ${0} -fs 48 \"big\""
